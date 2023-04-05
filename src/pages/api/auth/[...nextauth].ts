@@ -1,24 +1,33 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import {hash, compare} from 'bcrypt';
+import {PrismaClient} from '@prisma/client';
+
+const prisma = new PrismaClient();
+const saltRounds = 10;
 
 export default NextAuth({
   providers: [
     CredentialsProvider({
-      name: 'Credentials',
       credentials: {
         username: {
           label: 'Username',
           type: 'text',
-          placeholder: 'jsmith',
         },
         password: {label: 'Password', type: 'password'},
       },
-      async authorize() {
+      async authorize(credentials) {
+        if (!credentials) return null;
+        const {username, password} = credentials;
+        const passwordHash = await hash(password, saltRounds);
+        let user = await prisma.user.findFirst({where: {username}});
+        if (!user)
+          user = await prisma.user.create({data: {username, passwordHash}});
+        const passwordIsValid = await compare(password, user.passwordHash);
+        if (!passwordIsValid) return null;
         return {
-          id: '1',
-          name: 'J Smith',
-          email: 'jsmith@example.com',
-          image: 'https://i.pravatar.cc/150?u=jsmith@example.com',
+          id: username,
+          name: username,
         };
       },
     }),
