@@ -20,7 +20,7 @@ export default NextAuth({
         if (!credentials) return null;
         const {username, password} = credentials;
         const passwordHash = await hash(password, saltRounds);
-        let user = await prisma.user.findFirst({where: {username}});
+        let user = await prisma.user.findUnique({where: {username}});
         if (!user)
           user = await prisma.user.create({data: {username, passwordHash}});
         const passwordIsValid = await compare(password, user.passwordHash);
