@@ -1,10 +1,9 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import {hash, compare} from 'bcrypt';
+import {compare} from 'bcrypt';
 import {PrismaClient} from '@prisma/client';
 
 const prisma = new PrismaClient();
-const saltRounds = 10;
 
 export default NextAuth({
   providers: [
@@ -19,10 +18,8 @@ export default NextAuth({
       async authorize(credentials) {
         if (!credentials) return null;
         const {username, password} = credentials;
-        const passwordHash = await hash(password, saltRounds);
-        let user = await prisma.user.findUnique({where: {username}});
-        if (!user)
-          user = await prisma.user.create({data: {username, passwordHash}});
+        const user = await prisma.user.findUnique({where: {username}});
+        if (!user) return null;
         const passwordIsValid = await compare(password, user.passwordHash);
         if (!passwordIsValid) return null;
         return {
